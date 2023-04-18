@@ -10,8 +10,9 @@
 
 typedef enum 
 {
-  hdrcap_NEXT_INTERFACE_OUTPUT,
-  hdrcap_N_NEXT,
+  hdrcap_NEXT_INTERFACE_OUTPUT,//0
+  //hdrcap_NEXT_INTERFACE_udp,//if define a node that never use, it will cause an erro!!
+  hdrcap_N_NEXT,//1
 } hdrcap_next_t;
 
 
@@ -94,7 +95,7 @@ static uword hdrcap_node_fn(vlib_main_t *vm, vlib_node_runtime_t *node,
 			if(flag == 1){
 				printf("Src addr:");
 				for(int i=0;i<4;i++){
-					u8 val = *(u8 *)(en0+26+i);
+					u8 val = *(u8 *)(en0+26+i);// 0x0c *(en0+26+i)
 				    printf("%u", val);  //let unsigned int value trun into decimal value
 				    if(i != 3){printf(".");}
 				}
@@ -120,7 +121,7 @@ static uword hdrcap_node_fn(vlib_main_t *vm, vlib_node_runtime_t *node,
 		vlib_put_next_frame(vm, node, next_index, n_left_to_next);
 	}
 	
-	return 0;
+	return 0;//0
 
 }
 
