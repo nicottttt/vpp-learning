@@ -17,5 +17,4 @@ add_vpp_plugin(hdrcap
   hdrcap.c
   hdrcap.h
   hdrcap_node.c
-  
 )

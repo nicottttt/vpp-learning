@@ -19,7 +19,37 @@ typedef enum
 
 extern vlib_node_registration_t hdrcap_node;
 
+typedef struct 
+{
+//   u32 next_index;
+//   u32 sw_if_index;
+//   u8 new_src_mac[6];
+//   u8 new_dst_mac[6];
+	u32 src_ip;
+	u32 dst_ip;
 
+	//u8 a[4];
+} hdrcap_trace_t;
+
+static u8 *
+my_format_ip_address (u8 * s, va_list * args)
+{
+  u8 *a = va_arg (*args, u8 *);
+  return format (s, "%d.%d.%d.%d",  a[0], a[1], a[2], a[3]);
+}
+
+
+static u8 * format_hdrcap_trace (u8 * s, va_list * args)
+{
+	CLIB_UNUSED (vlib_main_t * vm) = va_arg (*args, vlib_main_t *);
+  	CLIB_UNUSED (vlib_node_t * node) = va_arg (*args, vlib_node_t *);
+	hdrcap_trace_t * t = va_arg (*args, hdrcap_trace_t *);
+
+  	s = format (s, "src ip addr %U -> dst ip addr %U",
+              my_format_ip_address, &t->src_ip,//void pt 
+              my_format_ip_address, &t->dst_ip);//t->a
+	return s;
+}
 
 static uword hdrcap_node_fn(vlib_main_t *vm, vlib_node_runtime_t *node,
         vlib_frame_t * frame){
@@ -50,6 +80,7 @@ static uword hdrcap_node_fn(vlib_main_t *vm, vlib_node_runtime_t *node,
 			u32 bi0;//buffer index
 			u32 next0 = 0;
 			void *en0;
+			ip4_header_t *eth0;
 			int flag = 0;
 
 			bi0 = from[0];//*from
@@ -76,18 +107,20 @@ static uword hdrcap_node_fn(vlib_main_t *vm, vlib_node_runtime_t *node,
 			
 			en0 = vlib_buffer_get_current (b0);//get the data here,current_data in it is an offset
 			//en0 here is the pointer of data, different from the b0. 数据的指针
-
+			eth0 = vlib_buffer_get_current (b0);
 			//type the ethernet hdr and ip hdr of the packet here
 
 
 			//*(u8 *)(en0) is already a value, unsigned value(c0...)
 			
 			if(*(u8 *)(en0+23)==0x01){
-				printf("icmp\n");
+				printf("icmp, ");
+				printf("%x\n",eth0->protocol);
 				flag = 1;
 			}
 			else if(*(u8 *)(en0+23)==0x11){
-				printf("UDP msg\n");
+				printf("UDP msg, ");
+				printf("%x\n",eth0->protocol);
 				flag = 1;
 			
 			}
@@ -107,12 +140,30 @@ static uword hdrcap_node_fn(vlib_main_t *vm, vlib_node_runtime_t *node,
 				    if(i != 3){printf(".");}
 				}
 
+				//trace code
+				hdrcap_trace_t *t = vlib_add_trace (vm, node, b0, sizeof (*t));
+				t->src_ip = *(u32 *)(en0 + 26);
+
+//				t->a[0]=*(u8 *)(en0+26);t->a[1]=*(u8 *)(en0+27)
+
+
+
+				t->dst_ip = *(u32 *)(en0 + 30);
+				//ntohl()
+				//192.168.77.134 host hton()--> internet 
 				flag = 0;
 			}
 
 			
 			
 			printf("\n");
+
+	
+			
+
+
+
+
 			vlib_validate_buffer_enqueue_x1(vm, node, next_index, to_next, n_left_to_next, bi0, next0);//put it to the next buffer
 
 			
@@ -131,7 +182,7 @@ VLIB_REGISTER_NODE (hdrcap_node) = {
         .name		= "hdrcap",
         .function       = hdrcap_node_fn,
         .vector_size    = sizeof(u32),
-        //.format_trace   = format_hdrcap_trace,
+        .format_trace   = format_hdrcap_trace,
         .type           =  VLIB_NODE_TYPE_INTERNAL,//which means that it is a middle node
         //.n_errors       = ARRAY_LEN(hdrcap_error_strings),
         //.error_strings  = hdrcap_error_strings,
