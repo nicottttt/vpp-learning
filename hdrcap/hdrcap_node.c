@@ -79,8 +79,7 @@ static uword hdrcap_node_fn(vlib_main_t *vm, vlib_node_runtime_t *node,
 			vlib_buffer_t *b0;
 			u32 bi0;//buffer index
 			u32 next0 = 0;
-			void *en0;
-			ip4_header_t *eth0;
+			ip4_header_t *en0;
 			int flag = 0;
 
 			bi0 = from[0];//*from
@@ -107,61 +106,56 @@ static uword hdrcap_node_fn(vlib_main_t *vm, vlib_node_runtime_t *node,
 			
 			en0 = vlib_buffer_get_current (b0);//get the data here,current_data in it is an offset
 			//en0 here is the pointer of data, different from the b0. 数据的指针
-			eth0 = vlib_buffer_get_current (b0);
+		
 			//type the ethernet hdr and ip hdr of the packet here
-
 
 			//*(u8 *)(en0) is already a value, unsigned value(c0...)
 			
+			/* en0 here is a void type pointer
 			if(*(u8 *)(en0+23)==0x01){
 				printf("icmp, ");
-				printf("%x\n",eth0->protocol);
 				flag = 1;
 			}
 			else if(*(u8 *)(en0+23)==0x11){
 				printf("UDP msg, ");
-				printf("%x\n",eth0->protocol);
 				flag = 1;
-			
+			}*/
+
+			if(en0->protocol==0x01){
+				printf("icmp, ");
+				flag = 1;
+			}
+			else if(en0->protocol==0x11){
+				printf("UDP msg, ");
+				flag = 1;
 			}
 			
 			if(flag == 1){
-				printf("Src addr:");
+				printf("Src addr:"); 
 				for(int i=0;i<4;i++){
-					u8 val = *(u8 *)(en0+26+i);// 0x0c *(en0+26+i)
-				    printf("%u", val);  //let unsigned int value trun into decimal value
+					//u8 val = en0->src_address.as_u8[i];
+				    printf("%u", en0->src_address.as_u8[i]);  //let unsigned int value trun into decimal value
 				    if(i != 3){printf(".");}
 				}
-
 				printf("  Dst addr:");
 				for(int i=0;i<4;i++){
-					u8 val = *(u8 *)(en0+30+i);
-				    printf("%u", val);  //let unsigned int value trun into decimal value
+					//u8 val = en0->dst_address.as_u8[i];// 0x0c *(en0+26+i)
+				    printf("%u", en0->dst_address.as_u8[i]);  //let unsigned int value trun into decimal value
 				    if(i != 3){printf(".");}
 				}
-
 				//trace code
 				hdrcap_trace_t *t = vlib_add_trace (vm, node, b0, sizeof (*t));
-				t->src_ip = *(u32 *)(en0 + 26);
+				t->src_ip = en0->src_address.as_u32;
 
 //				t->a[0]=*(u8 *)(en0+26);t->a[1]=*(u8 *)(en0+27)
-
-
-
-				t->dst_ip = *(u32 *)(en0 + 30);
+				t->dst_ip = en0->dst_address.as_u32;
 				//ntohl()
 				//192.168.77.134 host hton()--> internet 
 				flag = 0;
 			}
 
 			
-			
 			printf("\n");
-
-	
-			
-
-
 
 
 			vlib_validate_buffer_enqueue_x1(vm, node, next_index, to_next, n_left_to_next, bi0, next0);//put it to the next buffer
@@ -188,7 +182,8 @@ VLIB_REGISTER_NODE (hdrcap_node) = {
         //.error_strings  = hdrcap_error_strings,
         .n_next_nodes   = hdrcap_N_NEXT,
         .next_nodes     = {
-                [hdrcap_NEXT_INTERFACE_OUTPUT] = "ethernet-input",
+                [hdrcap_NEXT_INTERFACE_OUTPUT] = "ip4-icmp-input",
+				//[hdrcap_NEXT_INTERFACE_OUTPUT] = "ip4-input",
 					//
 					//
         },

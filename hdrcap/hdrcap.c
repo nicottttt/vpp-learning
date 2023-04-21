@@ -7,7 +7,7 @@ hdrcap_main_t hdrcap_main;
 
 
 
-int hdrcap_enable_disable (hdrcap_main_t * nmp, u32 sw_if_index,
+int hdrcap_enable_disable (hdrcap_main_t * hmp, u32 sw_if_index,
                                    int enable_disable){
 	hdrcap_main_t *pt = &hdrcap_main;
 	
@@ -16,15 +16,13 @@ int hdrcap_enable_disable (hdrcap_main_t * nmp, u32 sw_if_index,
 		return VNET_API_ERROR_INVALID_SW_IF_INDEX;
 
 	//the api link to the node??
-	vnet_feature_enable_disable("device-input", "hdrcap", sw_if_index, enable_disable, 0, 0);
-	
+	vnet_feature_enable_disable("ip4-local", "hdrcap", sw_if_index, enable_disable, 0, 0);
 	return 0;
-
 }
 
 
 
-
+//check the format of the command line
 static clib_error_t* hdrcap_enable_disable_command_fn(vlib_main_t* vm,
                                     unformat_input_t *input,
                                     vlib_cli_command_t *cmd)
@@ -57,10 +55,21 @@ static clib_error_t* hdrcap_enable_disable_command_fn(vlib_main_t* vm,
 
 	return 0;
 
-
-
 }
 
+// /* API message handler */
+// static void vl_api_hdrcap_enable_disable_t_handler
+// (vl_api_hdrcap_enable_disable_t * mp)
+// {
+//   vl_api_hdrcap_enable_disable_reply_t * rmp;
+//   nico_example_main_t * nmp = &nico_example_main;
+//   int rv;
+
+//   rv = nico_example_enable_disable (nmp, ntohl(mp->sw_if_index),
+//                                       (int) (mp->enable_disable));
+
+//   REPLY_MACRO(VL_API_NICO_EXAMPLE_ENABLE_DISABLE_REPLY);
+// }
 
 VLIB_CLI_COMMAND (hdrcap_command, static) = {
     .path = "hdrcap",
@@ -99,9 +108,9 @@ VLIB_INIT_FUNCTION(hdrcap_init);
 
 VNET_FEATURE_INIT(hdrcap, static) = {
 
-	.arc_name = "device-input",
-	.node_name = "hdrcap",//here it will recognize hdrcap.c and hdrcap_node.c ???
-	.runs_before = VNET_FEATURES("ethernet-input")
+	.arc_name = "ip4-local",//???????
+	.node_name = "hdrcap",//here it will recognize hdrcap.c and hdrcap_node.c 
+	.runs_after = VNET_FEATURES("ip4-icmp-input")
 	//.runs_after = VNET_FEATURES("ip4-icmp-echo-request")
 
 };
