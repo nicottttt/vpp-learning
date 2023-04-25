@@ -1,0 +1,2 @@
+go to the build-roots: find . -iname "*.json" -type f -exec cp {} ../json/ \; 
+in the vpp root: sudo -E LD_LIBRARY_PATH=$LD_LIBRARY_PATH /home/nico/Desktop/vpp/virtualenv/bin/python py_scripts/api_test.py 

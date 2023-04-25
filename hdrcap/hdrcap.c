@@ -1,5 +1,19 @@
+#include <vnet/vnet.h>
 #include <vnet/plugin/plugin.h>
 #include <hdrcap/hdrcap.h>
+
+#include <vlibapi/api.h>
+#include <vlibmemory/api.h>
+#include <vpp/app/version.h>
+#include <stdbool.h>
+
+#include <hdrcap/hdrcap.api_enum.h>
+#include <hdrcap/hdrcap.api_types.h>
+
+#define REPLY_MSG_ID_BASE pt->msg_id_base
+#include <vlibapi/api_helper_macros.h>
+#include <vhost/vhost_user.h>
+
 
 
 hdrcap_main_t hdrcap_main;
@@ -57,19 +71,22 @@ static clib_error_t* hdrcap_enable_disable_command_fn(vlib_main_t* vm,
 
 }
 
-// /* API message handler */
-// static void vl_api_hdrcap_enable_disable_t_handler
-// (vl_api_hdrcap_enable_disable_t * mp)
-// {
-//   vl_api_hdrcap_enable_disable_reply_t * rmp;
-//   nico_example_main_t * nmp = &nico_example_main;
-//   int rv;
+/* API message handler */
+static void vl_api_hdrcap_enable_disable_t_handler
+(vl_api_hdrcap_enable_disable_t * mp)
+{
+  vl_api_hdrcap_enable_disable_reply_t * rmp;
+  hdrcap_main_t * pt = &hdrcap_main;
+  int rv;
+  rv = hdrcap_enable_disable (pt, ntohl(mp->sw_if_index),
+                                      (int) (mp->enable_disable));
 
-//   rv = nico_example_enable_disable (nmp, ntohl(mp->sw_if_index),
-//                                       (int) (mp->enable_disable));
+  REPLY_MACRO(VL_API_HDRCAP_ENABLE_DISABLE_REPLY);
+}
 
-//   REPLY_MACRO(VL_API_NICO_EXAMPLE_ENABLE_DISABLE_REPLY);
-// }
+#include <hdrcap/hdrcap.api.c>// include here is because it need the function of vl_api_hdrcap_enable_disable_t_handler
+
+
 
 VLIB_CLI_COMMAND (hdrcap_command, static) = {
     .path = "hdrcap",
@@ -87,7 +104,6 @@ VLIB_CLI_COMMAND (hdrcap_command, static) = {
 VLIB_PLUGIN_REGISTER()={
 	.version = HDRCAP_PLUGIN_VERSION,
 	.description = "header capture example",
-
 };
 
 
@@ -98,6 +114,9 @@ static clib_error_t *hdrcap_init(vlib_main_t *vm){
 
 	pt->vlib_main = vm;
 	pt->vnet_main = vnet_get_main();
+
+	/* Add our API messages to the global name_crc hash table */
+  	pt->msg_id_base = setup_message_id_table ();
 
 	return NULL;
 	
@@ -110,7 +129,8 @@ VNET_FEATURE_INIT(hdrcap, static) = {
 
 	.arc_name = "ip4-local",//???????
 	.node_name = "hdrcap",//here it will recognize hdrcap.c and hdrcap_node.c 
-	.runs_after = VNET_FEATURES("ip4-icmp-input")
+	.runs_after = VNET_FEATURES("ip4-receive")
+	//.runs_after = VNET_FEATURES("ip4-icmp-input")
 	//.runs_after = VNET_FEATURES("ip4-icmp-echo-request")
 
 };
