@@ -14,7 +14,7 @@
 
 typedef enum 
 {
-  UDP_ECHO_MSG_NEXT_DROP,//0
+  UDP_ECHO_MSG_NEXT_LOOKUP,//0
   UDP_ECHO_MSG_N_NEXT,//1
 } udp_echo_msg_next_t;
 
@@ -72,7 +72,7 @@ static uword echo_repley_node_fn(vlib_main_t *vm, vlib_node_runtime_t *node, vli
             u32 bi0;
             vlib_buffer_t * b0;
             
-            u32 next0 = UDP_ECHO_MSG_NEXT_DROP;
+            u32 next0 = UDP_ECHO_MSG_NEXT_LOOKUP;
             //u32 sw_if_index0;
             //u8 tmp0[6];
             
@@ -96,8 +96,8 @@ static uword echo_repley_node_fn(vlib_main_t *vm, vlib_node_runtime_t *node, vli
             eth = ethernet_buffer_get_header (b0); 
             ip4 = (void *)(b0->data + vnet_buffer (b0)->l3_hdr_offset);
             //udp = (udp_header_t *)(b0->data + vnet_buffer (b0)->l4_hdr_offset);//??this function doesn't work
-
-            u8 ip_header_length = (ip4->ip_version_and_header_length & 0x0F) * 4;
+            //the way to capture the udp hdr
+            u8 ip_header_length = (ip4->ip_version_and_header_length & 0x0F) * 4;//version and len stay together, use bit operation to get the len
             udp = (udp_header_t *)((u8 *)ip4 + ip_header_length);
 
             data = vlib_buffer_get_current (b0);//data
@@ -134,6 +134,7 @@ static uword echo_repley_node_fn(vlib_main_t *vm, vlib_node_runtime_t *node, vli
             }
             printf("\n");
             
+            //print udp msg here
             printf("\nUDP header: \n");
             printf("Udp->src port: %u", ntohs(udp->src_port));//!!ntoh
             printf("  Udp->dst port: %u\n", ntohs(udp->dst_port));
@@ -146,7 +147,7 @@ static uword echo_repley_node_fn(vlib_main_t *vm, vlib_node_runtime_t *node, vli
             int len = ntohs(udp->length)-sizeof(udp_header_t);
             printf("\ndata: ");   
             for (int i=0; i<len; i++){
-              printf("%c",*(u8 *)(data+i));
+              printf("%c",*(u8 *)(data+i));//transfer the hex to ascii
             }
             printf("\n");
             printf("------pkt------\n");
@@ -155,11 +156,10 @@ static uword echo_repley_node_fn(vlib_main_t *vm, vlib_node_runtime_t *node, vli
             
 
 #if ENABLE_TRACE_UDP//start the trace function
-          if (b0->flags & VLIB_BUFFER_IS_TRACED) { //**
+          if (b0->flags & VLIB_BUFFER_IS_TRACED) { //**if I don't have this line of code, when I don't need trace, it will occur error
 					//trace code
 					udp_echo_msg_trace_t *t = vlib_add_trace (vm, node, b0, sizeof (*t));
 					t->src_ip = ip4->src_address.as_u32;
-
 					t->dst_ip = ip4->dst_address.as_u32;
 					//ntohl()
 					//192.168.77.134 host hton()--> internet 
@@ -189,11 +189,9 @@ static uword echo_repley_node_fn(vlib_main_t *vm, vlib_node_runtime_t *node, vli
             vlib_put_frame_to_node (vm, ip4_lookup_node.index, f);
 
 #endif
-            //set the pointer back !!!
+            //set the pointer back !!! Since it is given to ip4-lookup, the pointer must point to the beginning of the ip header
             int offset = sizeof (ip4_header_t) + sizeof (udp_header_t);
             vlib_buffer_advance(b0, -offset);
-
-
 
 
 
@@ -206,7 +204,7 @@ static uword echo_repley_node_fn(vlib_main_t *vm, vlib_node_runtime_t *node, vli
 
 
   
-    return 0;//drop the frame here
+    return 0;
 }
 
 
@@ -222,6 +220,6 @@ VLIB_REGISTER_NODE (echo_repley_node) =
   .type = VLIB_NODE_TYPE_INTERNAL,
   .n_next_nodes = UDP_ECHO_MSG_N_NEXT,
   .next_nodes = {
-    [UDP_ECHO_MSG_NEXT_DROP] = "ip4-lookup",//drop the frame
+    [UDP_ECHO_MSG_NEXT_LOOKUP] = "ip4-lookup",
   },
 };

@@ -3,14 +3,18 @@
 #include <vnet/udp/udp.h>
 #include <vnet/vnet.h>
 #include <vnet/udp/udp_local.h>
-#include <vnet/plugin/plugin.h>
 #include <vnet/ip/ip_sas.h>
 #include <vlibapi/api.h>
 #include <vlibmemory/api.h>
 #include <vpp/app/version.h>
 #include <stdbool.h>
 
+#include <udp_echo_msg/udp_echo_msg.api_enum.h>
+#include <udp_echo_msg/udp_echo_msg.api_types.h>
 
+#define REPLY_MSG_ID_BASE pt->msg_id_base
+#include <vlibapi/api_helper_macros.h>
+#include <vhost/vhost_user.h>
 
 
 
@@ -23,14 +27,13 @@ int udp_echo_msg_enable_disable (vlib_main_t * vm, udp_echo_msg_main_t * hmp,
 	
 	if(enable_disable == 1){
 		if( pt->udp_ports_registered != 1){
-			udp_register_dst_port (vm, UDP_DST_PORT_udp_echo_msg, echo_repley_node.index, 1 /* is_ip4 */ );
+			udp_register_dst_port (vm, 8889, echo_repley_node.index, 1 /* is_ip4 */ );
 			pt->udp_ports_registered = 1;
 		}
-		
 	}
 	else if(enable_disable == 0){
 		if( pt->udp_ports_registered == 1){
-			udp_unregister_dst_port (vm, UDP_DST_PORT_udp_echo_msg, 1 /* is_ip4 */ );
+			udp_unregister_dst_port (vm, 8889, 1 /* is_ip4 */ );
 			pt->udp_ports_registered = 0;
 		}
 	}
@@ -69,19 +72,21 @@ static clib_error_t* udp_echo_msg_enable_disable_command_fn(vlib_main_t* vm,
 
 
 
-// static void vl_api_udp_echo_msg_t_handler (vl_api_udp_echo_msg_enable_disable_t * mp){
+static void vl_api_udp_echo_msg_enable_disable_t_handler (vl_api_udp_echo_msg_enable_disable_t * mp){
 
-//   //sw_if_index is to link to the interface in vpp
+  vl_api_udp_echo_msg_enable_disable_reply_t * rmp;
+  udp_echo_msg_main_t *pt = &udp_echo_msg_main;
 
-//   vl_api_udp_echo_msg_enable_disable_reply_t * rmp;
-//   udp_echo_msg_main_t *pt = &udp_echo_msg_main;
+  int rv;
+  rv = udp_echo_msg_enable_disable (pt->vlib_main, pt, (int) (mp->enable_disable));
 
-//   udp_echo_msg_enable_disable (pt, ntohl(mp->sw_if_index), (int) (mp->enable_disable));
-
-//   REPLY_MACRO(VL_API_NICO_EXAMPLE_ENABLE_DISABLE_REPLY);
+  REPLY_MACRO(VL_API_UDP_ECHO_MSG_ENABLE_DISABLE_REPLY);
 
 
-// }
+}
+
+#include <udp_echo_msg/udp_echo_msg.api.c> //
+
 
 VLIB_CLI_COMMAND (udp_echo_msg_command, static) = {
     .path = "udp_echo_msg",
@@ -96,7 +101,6 @@ VLIB_CLI_COMMAND (udp_echo_msg_command, static) = {
 VLIB_PLUGIN_REGISTER()={
 	.version = UDP_ECHO_MSG_PLUGIN_VERSION,
 	.description = "This plugin is to send back the msg to where it comes from",
-
 };
 
 
@@ -107,6 +111,9 @@ static clib_error_t *udp_echo_msg_init(vlib_main_t *vm){
 
 	pt->vlib_main = vm;
 	pt->vnet_main = vnet_get_main();
+
+	/* Add our API messages to the global name_crc hash table */
+  	pt->msg_id_base = setup_message_id_table ();
 
 	return NULL;
 	

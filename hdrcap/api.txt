@@ -1,2 +1,2 @@
-go to the CMakefiles: find . -iname "*.json" -type f -exec cp {} ../json/ \; 
+go to the CMakefiles: sudo find . -iname "*.json" -type f -exec cp {} ../json/ \; 
 in the vpp root: sudo -E LD_LIBRARY_PATH=$LD_LIBRARY_PATH /home/nico/Desktop/vpp/virtualenv/bin/python python_test/hdrcap_test.py 

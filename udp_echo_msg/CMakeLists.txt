@@ -18,4 +18,7 @@ add_vpp_plugin(udp_echo_msg
   udp_echo_msg_node.c
   udp_echo_msg.h
 
+  API_FILES
+  udp_echo_msg.api
+
 )
