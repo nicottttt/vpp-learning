@@ -24,3 +24,8 @@ start vpp with startup.conf and init.vpp:
 ```
 sudo -E vpp -c startup.conf
 ```
+
+link the real path to environment path:
+```
+ln -s /root/vpp_test/vpp/build-root/install-vpp-native/vpp/bin/vpp /usr/bin/vpp
+```
